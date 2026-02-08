@@ -286,66 +286,81 @@ namespace SAM.Picker
         {
             isCompleted = false;
 
-            var stats = kv[appId.ToString(CultureInfo.InvariantCulture)]["stats"];
-            if (stats.Valid == false || stats.Children == null)
+            var root = kv[appId.ToString(CultureInfo.InvariantCulture)];
+            if (root.Valid == false)
             {
-                return false;
+                root = kv;
             }
 
             int total = 0;
             int achieved = 0;
 
-            foreach (var stat in stats.Children)
+            var stats = root["stats"];
+            if (stats.Valid == true && stats.Children != null)
             {
-                if (stat.Valid == false)
+                foreach (var stat in stats.Children)
                 {
-                    continue;
-                }
-
-                var rawType = stat["type_int"].Valid
-                    ? stat["type_int"].AsInteger(0)
-                    : stat["type"].AsInteger(0);
-                var type = (APITypes.UserStatType)rawType;
-                if (type != APITypes.UserStatType.Achievements &&
-                    type != APITypes.UserStatType.GroupAchievements)
-                {
-                    continue;
-                }
-
-                if (stat.Children == null)
-                {
-                    continue;
-                }
-
-                foreach (var bits in stat.Children.Where(
-                    b => string.Compare(b.Name, "bits", StringComparison.InvariantCultureIgnoreCase) == 0))
-                {
-                    if (bits.Valid == false || bits.Children == null)
+                    if (stat.Valid == false)
                     {
                         continue;
                     }
 
-                    foreach (var bit in bits.Children)
+                    var rawType = stat["type_int"].Valid
+                        ? stat["type_int"].AsInteger(0)
+                        : stat["type"].AsInteger(0);
+                    var type = (APITypes.UserStatType)rawType;
+                    if (type != APITypes.UserStatType.Achievements &&
+                        type != APITypes.UserStatType.GroupAchievements)
                     {
-                        if (bit.Valid == false)
+                        continue;
+                    }
+
+                    if (stat.Children == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var bits in stat.Children.Where(
+                        b => string.Compare(b.Name, "bits", StringComparison.InvariantCultureIgnoreCase) == 0))
+                    {
+                        if (bits.Valid == false || bits.Children == null)
+                        {
+                            continue;
+                        }
+
+                        foreach (var bit in bits.Children)
+                        {
+                            if (bit.Valid == false)
+                            {
+                                continue;
+                            }
+
+                            total++;
+
+                            if (IsAchievementUnlocked(bit) == true)
+                            {
+                                achieved++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (total == 0)
+            {
+                var achievements = root["achievements"];
+                if (achievements.Valid == true && achievements.Children != null)
+                {
+                    foreach (var achievement in achievements.Children)
+                    {
+                        if (achievement.Valid == false)
                         {
                             continue;
                         }
 
                         total++;
 
-                        bool isAchieved = bit["achieved"].AsBoolean(false);
-                        if (isAchieved == false && bit["value"].AsBoolean(false) == true)
-                        {
-                            isAchieved = true;
-                        }
-
-                        if (isAchieved == false && bit["unlock_time"].AsInteger(0) > 0)
-                        {
-                            isAchieved = true;
-                        }
-
-                        if (isAchieved == true)
+                        if (IsAchievementUnlocked(achievement) == true)
                         {
                             achieved++;
                         }
@@ -360,6 +375,22 @@ namespace SAM.Picker
 
             isCompleted = achieved == total;
             return true;
+        }
+
+        private static bool IsAchievementUnlocked(KeyValue achievement)
+        {
+            bool isAchieved = achievement["achieved"].AsBoolean(false);
+            if (isAchieved == false && achievement["value"].AsBoolean(false) == true)
+            {
+                isAchieved = true;
+            }
+
+            if (isAchieved == false && achievement["unlock_time"].AsInteger(0) > 0)
+            {
+                isAchieved = true;
+            }
+
+            return isAchieved;
         }
 
         private void OnGameListViewRetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
