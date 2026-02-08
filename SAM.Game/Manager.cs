@@ -50,6 +50,8 @@ namespace SAM.Game
 
         private readonly API.Callbacks.UserStatsReceived _UserStatsReceivedCallback;
 
+        private DateTime? _LastUnlockedAchievementTime;
+
         //private API.Callback<APITypes.UserStatsStored> UserStatsStoredCallback;
 
         public Manager(long gameId, API.Client client)
@@ -391,7 +393,7 @@ namespace SAM.Game
                 return;
             }
 
-            this._GameStatusLabel.Text = $"Retrieved {this._AchievementListView.Items.Count} achievements and {this._StatisticsDataGridView.Rows.Count} statistics.";
+            this.UpdateGameStatusLabel();
             this.EnableInput();
         }
 
@@ -401,6 +403,8 @@ namespace SAM.Game
             this._StatisticsDataGridView.Rows.Clear();
 
             var steamId = this._SteamClient.SteamUser.GetSteamId();
+
+            this._SteamClient.SteamUserStats.RequestGlobalAchievementPercentages();
 
             // This still triggers the UserStatsReceived callback, in addition to the callresult.
             // No need to implement callresults for the time being.
@@ -437,6 +441,9 @@ namespace SAM.Game
             bool wantLocked = this._DisplayLockedOnlyButton.Checked == true;
             bool wantUnlocked = this._DisplayUnlockedOnlyButton.Checked == true;
 
+            DateTime? latestUnlockTime = null;
+            List<Stats.AchievementInfo> filteredAchievements = new();
+
             foreach (var def in this._AchievementDefinitions)
             {
                 if (string.IsNullOrEmpty(def.Id) == true)
@@ -450,6 +457,24 @@ namespace SAM.Game
                     out var unlockTime) == false)
                 {
                     continue;
+                }
+
+                DateTime? localUnlockTime = isAchieved == true && unlockTime > 0
+                    ? DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime
+                    : null;
+
+                if (localUnlockTime.HasValue == true &&
+                    (latestUnlockTime.HasValue == false || localUnlockTime > latestUnlockTime))
+                {
+                    latestUnlockTime = localUnlockTime;
+                }
+
+                float? globalPercent = null;
+                if (this._SteamClient.SteamUserStats.GetAchievementAchievedPercent(
+                    def.Id,
+                    out float achievedPercent) == true)
+                {
+                    globalPercent = achievedPercent;
                 }
 
                 bool wanted = (wantLocked == false && wantUnlocked == false) || isAchieved switch
@@ -487,9 +512,8 @@ namespace SAM.Game
                 {
                     Id = def.Id,
                     IsAchieved = isAchieved,
-                    UnlockTime = isAchieved == true && unlockTime > 0
-                        ? DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime
-                        : null,
+                    UnlockTime = localUnlockTime,
+                    GlobalPercent = globalPercent,
                     IconNormal = string.IsNullOrEmpty(def.IconNormal) ? null : def.IconNormal,
                     IconLocked = string.IsNullOrEmpty(def.IconLocked) ? def.IconNormal : def.IconLocked,
                     Permission = def.Permission,
@@ -517,20 +541,39 @@ namespace SAM.Game
                     item.SubItems.Add(info.Description);
                 }
 
-                item.SubItems.Add(info.UnlockTime.HasValue == true
-                    ? info.UnlockTime.Value.ToString()
+                item.SubItems.Add(info.GlobalPercent.HasValue
+                    ? $"{info.GlobalPercent.Value:0.00}%"
                     : "");
 
                 info.ImageIndex = 0;
 
+                filteredAchievements.Add(info);
+            }
+
+            this._LastUnlockedAchievementTime = latestUnlockTime;
+
+            foreach (var info in filteredAchievements
+                .OrderBy(achievement => achievement.GlobalPercent ?? float.MaxValue)
+                .ThenBy(achievement => achievement.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
                 this.AddAchievementToIconQueue(info, false);
-                this._AchievementListView.Items.Add(item);
+                this._AchievementListView.Items.Add(info.Item);
             }
 
             this._AchievementListView.EndUpdate();
             this._IsUpdatingAchievementList = false;
 
             this.DownloadNextIcon();
+            this.UpdateGameStatusLabel();
+        }
+
+        private void UpdateGameStatusLabel()
+        {
+            var status = $"Retrieved {this._AchievementListView.Items.Count} achievements and {this._StatisticsDataGridView.Rows.Count} statistics.";
+            status += this._LastUnlockedAchievementTime.HasValue
+                ? $" Last unlocked: {this._LastUnlockedAchievementTime.Value}."
+                : " Last unlocked: N/A.";
+            this._GameStatusLabel.Text = status;
         }
 
         private void GetStatistics()
