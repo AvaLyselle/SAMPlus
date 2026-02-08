@@ -50,6 +50,8 @@ namespace SAM.Game
 
         private readonly API.Callbacks.UserStatsReceived _UserStatsReceivedCallback;
 
+        private DateTime? _LastUnlockedAchievementTime;
+
         //private API.Callback<APITypes.UserStatsStored> UserStatsStoredCallback;
 
         public Manager(long gameId, API.Client client)
@@ -252,91 +254,91 @@ namespace SAM.Game
                 switch (type)
                 {
                     case APITypes.UserStatType.Invalid:
-                    {
-                        break;
-                    }
+                        {
+                            break;
+                        }
 
                     case APITypes.UserStatType.Integer:
-                    {
-                        var id = stat["name"].AsString("");
-                        string name = GetLocalizedString(stat["display"]["name"], currentLanguage, id);
-
-                        this._StatDefinitions.Add(new Stats.IntegerStatDefinition()
                         {
-                            Id = stat["name"].AsString(""),
-                            DisplayName = name,
-                            MinValue = stat["min"].AsInteger(int.MinValue),
-                            MaxValue = stat["max"].AsInteger(int.MaxValue),
-                            MaxChange = stat["maxchange"].AsInteger(0),
-                            IncrementOnly = stat["incrementonly"].AsBoolean(false),
-                            SetByTrustedGameServer = stat["bSetByTrustedGS"].AsBoolean(false),
-                            DefaultValue = stat["default"].AsInteger(0),
-                            Permission = stat["permission"].AsInteger(0),
-                        });
-                        break;
-                    }
+                            var id = stat["name"].AsString("");
+                            string name = GetLocalizedString(stat["display"]["name"], currentLanguage, id);
+
+                            this._StatDefinitions.Add(new Stats.IntegerStatDefinition()
+                            {
+                                Id = stat["name"].AsString(""),
+                                DisplayName = name,
+                                MinValue = stat["min"].AsInteger(int.MinValue),
+                                MaxValue = stat["max"].AsInteger(int.MaxValue),
+                                MaxChange = stat["maxchange"].AsInteger(0),
+                                IncrementOnly = stat["incrementonly"].AsBoolean(false),
+                                SetByTrustedGameServer = stat["bSetByTrustedGS"].AsBoolean(false),
+                                DefaultValue = stat["default"].AsInteger(0),
+                                Permission = stat["permission"].AsInteger(0),
+                            });
+                            break;
+                        }
 
                     case APITypes.UserStatType.Float:
                     case APITypes.UserStatType.AverageRate:
-                    {
-                        var id = stat["name"].AsString("");
-                        string name = GetLocalizedString(stat["display"]["name"], currentLanguage, id);
-
-                        this._StatDefinitions.Add(new Stats.FloatStatDefinition()
                         {
-                            Id = stat["name"].AsString(""),
-                            DisplayName = name,
-                            MinValue = stat["min"].AsFloat(float.MinValue),
-                            MaxValue = stat["max"].AsFloat(float.MaxValue),
-                            MaxChange = stat["maxchange"].AsFloat(0.0f),
-                            IncrementOnly = stat["incrementonly"].AsBoolean(false),
-                            DefaultValue = stat["default"].AsFloat(0.0f),
-                            Permission = stat["permission"].AsInteger(0),
-                        });
-                        break;
-                    }
+                            var id = stat["name"].AsString("");
+                            string name = GetLocalizedString(stat["display"]["name"], currentLanguage, id);
+
+                            this._StatDefinitions.Add(new Stats.FloatStatDefinition()
+                            {
+                                Id = stat["name"].AsString(""),
+                                DisplayName = name,
+                                MinValue = stat["min"].AsFloat(float.MinValue),
+                                MaxValue = stat["max"].AsFloat(float.MaxValue),
+                                MaxChange = stat["maxchange"].AsFloat(0.0f),
+                                IncrementOnly = stat["incrementonly"].AsBoolean(false),
+                                DefaultValue = stat["default"].AsFloat(0.0f),
+                                Permission = stat["permission"].AsInteger(0),
+                            });
+                            break;
+                        }
 
                     case APITypes.UserStatType.Achievements:
                     case APITypes.UserStatType.GroupAchievements:
-                    {
-                        if (stat.Children != null)
                         {
-                            foreach (var bits in stat.Children.Where(
-                                b => string.Compare(b.Name, "bits", StringComparison.InvariantCultureIgnoreCase) == 0))
+                            if (stat.Children != null)
                             {
-                                if (bits.Valid == false ||
-                                    bits.Children == null)
+                                foreach (var bits in stat.Children.Where(
+                                    b => string.Compare(b.Name, "bits", StringComparison.InvariantCultureIgnoreCase) == 0))
                                 {
-                                    continue;
-                                }
-
-                                foreach (var bit in bits.Children)
-                                {
-                                    string id = bit["name"].AsString("");
-                                    string name = GetLocalizedString(bit["display"]["name"], currentLanguage, id);
-                                    string desc = GetLocalizedString(bit["display"]["desc"], currentLanguage, "");
-
-                                    this._AchievementDefinitions.Add(new()
+                                    if (bits.Valid == false ||
+                                        bits.Children == null)
                                     {
-                                        Id = id,
-                                        Name = name,
-                                        Description = desc,
-                                        IconNormal = bit["display"]["icon"].AsString(""),
-                                        IconLocked = bit["display"]["icon_gray"].AsString(""),
-                                        IsHidden = bit["display"]["hidden"].AsBoolean(false),
-                                        Permission = bit["permission"].AsInteger(0),
-                                    });
+                                        continue;
+                                    }
+
+                                    foreach (var bit in bits.Children)
+                                    {
+                                        string id = bit["name"].AsString("");
+                                        string name = GetLocalizedString(bit["display"]["name"], currentLanguage, id);
+                                        string desc = GetLocalizedString(bit["display"]["desc"], currentLanguage, "");
+
+                                        this._AchievementDefinitions.Add(new()
+                                        {
+                                            Id = id,
+                                            Name = name,
+                                            Description = desc,
+                                            IconNormal = bit["display"]["icon"].AsString(""),
+                                            IconLocked = bit["display"]["icon_gray"].AsString(""),
+                                            IsHidden = bit["display"]["hidden"].AsBoolean(false),
+                                            Permission = bit["permission"].AsInteger(0),
+                                        });
+                                    }
                                 }
                             }
+
+                            break;
                         }
 
-                        break;
-                    }
-
                     default:
-                    {
-                        throw new InvalidOperationException("invalid stat type");
-                    }
+                        {
+                            throw new InvalidOperationException("invalid stat type");
+                        }
                 }
             }
 
@@ -391,7 +393,7 @@ namespace SAM.Game
                 return;
             }
 
-            this._GameStatusLabel.Text = $"Retrieved {this._AchievementListView.Items.Count} achievements and {this._StatisticsDataGridView.Rows.Count} statistics.";
+            this.UpdateGameStatusLabel();
             this.EnableInput();
         }
 
@@ -401,6 +403,8 @@ namespace SAM.Game
             this._StatisticsDataGridView.Rows.Clear();
 
             var steamId = this._SteamClient.SteamUser.GetSteamId();
+
+            this._SteamClient.SteamUserStats.RequestGlobalAchievementPercentages();
 
             // This still triggers the UserStatsReceived callback, in addition to the callresult.
             // No need to implement callresults for the time being.
@@ -437,6 +441,9 @@ namespace SAM.Game
             bool wantLocked = this._DisplayLockedOnlyButton.Checked == true;
             bool wantUnlocked = this._DisplayUnlockedOnlyButton.Checked == true;
 
+            DateTime? latestUnlockTime = null;
+            List<Stats.AchievementInfo> filteredAchievements = new();
+
             foreach (var def in this._AchievementDefinitions)
             {
                 if (string.IsNullOrEmpty(def.Id) == true)
@@ -450,6 +457,24 @@ namespace SAM.Game
                     out var unlockTime) == false)
                 {
                     continue;
+                }
+
+                DateTime? localUnlockTime = isAchieved == true && unlockTime > 0
+                    ? DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime
+                    : null;
+
+                if (localUnlockTime.HasValue == true &&
+                    (latestUnlockTime.HasValue == false || localUnlockTime > latestUnlockTime))
+                {
+                    latestUnlockTime = localUnlockTime;
+                }
+
+                float? globalPercent = null;
+                if (this._SteamClient.SteamUserStats.GetAchievementAchievedPercent(
+                    def.Id,
+                    out float achievedPercent) == true)
+                {
+                    globalPercent = achievedPercent;
                 }
 
                 bool wanted = (wantLocked == false && wantUnlocked == false) || isAchieved switch
@@ -487,9 +512,8 @@ namespace SAM.Game
                 {
                     Id = def.Id,
                     IsAchieved = isAchieved,
-                    UnlockTime = isAchieved == true && unlockTime > 0
-                        ? DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime
-                        : null,
+                    UnlockTime = localUnlockTime,
+                    GlobalPercent = globalPercent,
                     IconNormal = string.IsNullOrEmpty(def.IconNormal) ? null : def.IconNormal,
                     IconLocked = string.IsNullOrEmpty(def.IconLocked) ? def.IconNormal : def.IconLocked,
                     Permission = def.Permission,
@@ -517,20 +541,39 @@ namespace SAM.Game
                     item.SubItems.Add(info.Description);
                 }
 
-                item.SubItems.Add(info.UnlockTime.HasValue == true
-                    ? info.UnlockTime.Value.ToString()
+                item.SubItems.Add(info.GlobalPercent.HasValue
+                    ? $"{info.GlobalPercent.Value:0.00}%"
                     : "");
 
                 info.ImageIndex = 0;
 
+                filteredAchievements.Add(info);
+            }
+
+            this._LastUnlockedAchievementTime = latestUnlockTime;
+
+            foreach (var info in filteredAchievements
+                .OrderBy(achievement => achievement.GlobalPercent ?? float.MaxValue)
+                .ThenBy(achievement => achievement.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
                 this.AddAchievementToIconQueue(info, false);
-                this._AchievementListView.Items.Add(item);
+                this._AchievementListView.Items.Add(info.Item);
             }
 
             this._AchievementListView.EndUpdate();
             this._IsUpdatingAchievementList = false;
 
             this.DownloadNextIcon();
+            this.UpdateGameStatusLabel();
+        }
+
+        private void UpdateGameStatusLabel()
+        {
+            var status = $"Retrieved {this._AchievementListView.Items.Count} achievements and {this._StatisticsDataGridView.Rows.Count} statistics.";
+            status += this._LastUnlockedAchievementTime.HasValue
+                ? $" Last unlocked: {this._LastUnlockedAchievementTime.Value}."
+                : " Last unlocked: N/A.";
+            this._GameStatusLabel.Text = status;
         }
 
         private void GetStatistics()

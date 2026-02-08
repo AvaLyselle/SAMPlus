@@ -47,7 +47,7 @@
             this._AchievementListView = new SAM.Game.DoubleBufferedListView();
             this._AchievementNameColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this._AchievementDescriptionColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this._AchievementUnlockTimeColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this._AchievementGlobalPercentColumnHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this._AchievementsToolStrip = new System.Windows.Forms.ToolStrip();
             this._LockAllButton = new System.Windows.Forms.ToolStripButton();
             this._InvertAllButton = new System.Windows.Forms.ToolStripButton();
@@ -169,8 +169,8 @@
             // 
             // _MainTabControl
             // 
-            this._MainTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this._MainTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this._MainTabControl.Controls.Add(this._AchievementsTabPage);
             this._MainTabControl.Controls.Add(this._StatisticsTabPage);
@@ -201,7 +201,7 @@
             this._AchievementListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this._AchievementNameColumnHeader,
             this._AchievementDescriptionColumnHeader,
-            this._AchievementUnlockTimeColumnHeader});
+            this._AchievementGlobalPercentColumnHeader});
             this._AchievementListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this._AchievementListView.ForeColor = System.Drawing.Color.White;
             this._AchievementListView.FullRowSelect = true;
@@ -212,7 +212,7 @@
             this._AchievementListView.Name = "_AchievementListView";
             this._AchievementListView.Size = new System.Drawing.Size(682, 277);
             this._AchievementListView.SmallImageList = this._AchievementImageList;
-            this._AchievementListView.Sorting = System.Windows.Forms.SortOrder.Ascending;
+            this._AchievementListView.Sorting = System.Windows.Forms.SortOrder.None;
             this._AchievementListView.TabIndex = 4;
             this._AchievementListView.UseCompatibleStateImageBehavior = false;
             this._AchievementListView.View = System.Windows.Forms.View.Details;
@@ -228,10 +228,10 @@
             this._AchievementDescriptionColumnHeader.Text = "Description";
             this._AchievementDescriptionColumnHeader.Width = 300;
             // 
-            // _AchievementUnlockTimeColumnHeader
+            // _AchievementGlobalPercentColumnHeader
             // 
-            this._AchievementUnlockTimeColumnHeader.Text = "Unlock Time";
-            this._AchievementUnlockTimeColumnHeader.Width = 160;
+            this._AchievementGlobalPercentColumnHeader.Text = "Global %";
+            this._AchievementGlobalPercentColumnHeader.Width = 90;
             // 
             // _AchievementsToolStrip
             // 
@@ -293,6 +293,7 @@
             // 
             // _DisplayLockedOnlyButton
             // 
+            this._DisplayLockedOnlyButton.Checked = true;
             this._DisplayLockedOnlyButton.CheckOnClick = true;
             this._DisplayLockedOnlyButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this._DisplayLockedOnlyButton.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -340,7 +341,7 @@
             // 
             // _EnableStatsEditingCheckBox
             // 
-            this._EnableStatsEditingCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this._EnableStatsEditingCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this._EnableStatsEditingCheckBox.AutoSize = true;
             this._EnableStatsEditingCheckBox.Location = new System.Drawing.Point(6, 285);
@@ -356,8 +357,8 @@
             // 
             this._StatisticsDataGridView.AllowUserToAddRows = false;
             this._StatisticsDataGridView.AllowUserToDeleteRows = false;
-            this._StatisticsDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this._StatisticsDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this._StatisticsDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this._StatisticsDataGridView.Location = new System.Drawing.Point(6, 6);
@@ -424,7 +425,7 @@
         private System.Windows.Forms.ToolStripButton _DisplayLockedOnlyButton;
         private System.Windows.Forms.ToolStripLabel _MatchingStringLabel;
         private System.Windows.Forms.ToolStripTextBox _MatchingStringTextBox;
-        private System.Windows.Forms.ColumnHeader _AchievementUnlockTimeColumnHeader;
+        private System.Windows.Forms.ColumnHeader _AchievementGlobalPercentColumnHeader;
         private System.Windows.Forms.CheckBox _EnableStatsEditingCheckBox;
     }
 }
