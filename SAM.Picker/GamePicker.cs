@@ -293,7 +293,8 @@ namespace SAM.Picker
             }
 
             int total = 0;
-            int achieved = 0;
+            int unlocked = 0;
+            int locked = 0;
 
             foreach (var stat in stats.Children)
             {
@@ -347,7 +348,11 @@ namespace SAM.Picker
 
                         if (isAchieved == true)
                         {
-                            achieved++;
+                            unlocked++;
+                        }
+                        else
+                        {
+                            locked++;
                         }
                     }
                 }
@@ -358,7 +363,7 @@ namespace SAM.Picker
                 return false;
             }
 
-            isCompleted = achieved == total;
+            isCompleted = locked == unlocked;
             return true;
         }
 
