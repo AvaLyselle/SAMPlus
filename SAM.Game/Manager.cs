@@ -419,9 +419,14 @@ namespace SAM.Game
 
         private void GetAchievements()
         {
-            var textSearch = this._MatchingStringTextBox.Text.Length > 0
-                ? this._MatchingStringTextBox.Text
-                : null;
+            var filterText = this._MatchingStringTextBox.Text?.Trim();
+            string[] filterTerms = null;
+
+            if (string.IsNullOrWhiteSpace(filterText) == false && filterText.Length >= 3)
+            {
+                filterTerms = filterText
+                    .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            }
 
             this._IsUpdatingAchievementList = true;
 
@@ -457,10 +462,22 @@ namespace SAM.Game
                     continue;
                 }
 
-                if (textSearch != null)
+                if (filterTerms != null)
                 {
-                    if (def.Name.IndexOf(textSearch, StringComparison.OrdinalIgnoreCase) < 0 &&
-                        def.Description.IndexOf(textSearch, StringComparison.OrdinalIgnoreCase) < 0)
+                    bool matchesAllTerms = true;
+
+                    foreach (var term in filterTerms)
+                    {
+                        if (def.Name.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0 &&
+                            def.Description.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0 &&
+                            def.Id.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0)
+                        {
+                            matchesAllTerms = false;
+                            break;
+                        }
+                    }
+
+                    if (matchesAllTerms == false)
                     {
                         continue;
                     }
