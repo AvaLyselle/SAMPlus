@@ -287,6 +287,10 @@ namespace SAM.Picker
             isCompleted = false;
 
             var stats = kv[appId.ToString(CultureInfo.InvariantCulture)]["stats"];
+            if (stats.Valid == false)
+            {
+                stats = kv["stats"];
+            }
             if (stats.Valid == false || stats.Children == null)
             {
                 return false;
@@ -294,6 +298,7 @@ namespace SAM.Picker
 
             int total = 0;
             int achieved = 0;
+            bool foundAny = false;
 
             foreach (var stat in stats.Children)
             {
@@ -333,19 +338,9 @@ namespace SAM.Picker
                         }
 
                         total++;
+                        foundAny = true;
 
-                        bool isAchieved = bit["achieved"].AsBoolean(false);
-                        if (isAchieved == false && bit["value"].AsBoolean(false) == true)
-                        {
-                            isAchieved = true;
-                        }
-
-                        if (isAchieved == false && bit["unlock_time"].AsInteger(0) > 0)
-                        {
-                            isAchieved = true;
-                        }
-
-                        if (isAchieved == true)
+                        if (IsAchievementAchieved(bit) == true)
                         {
                             achieved++;
                         }
@@ -355,11 +350,197 @@ namespace SAM.Picker
 
             if (total == 0)
             {
+                if (this.TryGetAchievementDefinitions(appId, out var achievementIds) == false ||
+                    achievementIds.Count == 0)
+                {
+                    return false;
+                }
+
+                total = achievementIds.Count;
+                foreach (var achievementId in achievementIds)
+                {
+                    if (TryFindAchievementNode(stats, achievementId, out var achievementNode) == false)
+                    {
+                        continue;
+                    }
+
+                    foundAny = true;
+                    if (IsAchievementAchieved(achievementNode) == true)
+                    {
+                        achieved++;
+                    }
+                }
+            }
+
+            if (foundAny == false)
+            {
                 return false;
             }
 
             isCompleted = achieved == total;
             return true;
+        }
+
+        private bool TryGetAchievementDefinitions(uint appId, out HashSet<string> achievementIds)
+        {
+            achievementIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            string installPath;
+            try
+            {
+                installPath = API.Steam.GetInstallPath();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(installPath) == true)
+            {
+                return false;
+            }
+
+            string schemaPath = Path.Combine(
+                installPath,
+                "appcache",
+                "stats",
+                $"UserGameStatsSchema_{appId}.bin");
+
+            if (File.Exists(schemaPath) == false)
+            {
+                return false;
+            }
+
+            var schema = KeyValue.LoadAsBinary(schemaPath);
+            if (schema == null)
+            {
+                return false;
+            }
+
+            var stats = schema[appId.ToString(CultureInfo.InvariantCulture)]["stats"];
+            if (stats.Valid == false || stats.Children == null)
+            {
+                return false;
+            }
+
+            foreach (var stat in stats.Children)
+            {
+                if (stat.Valid == false)
+                {
+                    continue;
+                }
+
+                var rawType = stat["type_int"].Valid
+                    ? stat["type_int"].AsInteger(0)
+                    : stat["type"].AsInteger(0);
+                var type = (APITypes.UserStatType)rawType;
+                if (type != APITypes.UserStatType.Achievements &&
+                    type != APITypes.UserStatType.GroupAchievements)
+                {
+                    continue;
+                }
+
+                if (stat.Children == null)
+                {
+                    continue;
+                }
+
+                foreach (var bits in stat.Children.Where(
+                    b => string.Compare(b.Name, "bits", StringComparison.InvariantCultureIgnoreCase) == 0))
+                {
+                    if (bits.Valid == false || bits.Children == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var bit in bits.Children)
+                    {
+                        if (bit.Valid == false)
+                        {
+                            continue;
+                        }
+
+                        var name = bit["name"].AsString("");
+                        if (string.IsNullOrEmpty(name) == true)
+                        {
+                            continue;
+                        }
+
+                        achievementIds.Add(name);
+                    }
+                }
+            }
+
+            return achievementIds.Count > 0;
+        }
+
+        private static bool TryFindAchievementNode(KeyValue root, string achievementId, out KeyValue match)
+        {
+            match = null;
+
+            if (root == null)
+            {
+                return false;
+            }
+
+            if (IsAchievementNodeMatch(root, achievementId) == true)
+            {
+                match = root;
+                return true;
+            }
+
+            if (root.Children == null)
+            {
+                return false;
+            }
+
+            foreach (var child in root.Children)
+            {
+                if (TryFindAchievementNode(child, achievementId, out match) == true)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsAchievementNodeMatch(KeyValue node, string achievementId)
+        {
+            if (node == null)
+            {
+                return false;
+            }
+
+            if (string.Equals(node.Name, achievementId, StringComparison.OrdinalIgnoreCase) == false &&
+                string.Equals(node["name"].AsString(""), achievementId, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                return false;
+            }
+
+            return node["achieved"].Valid ||
+                   node["value"].Valid ||
+                   node["unlock_time"].Valid;
+        }
+
+        private static bool IsAchievementAchieved(KeyValue node)
+        {
+            if (node == null)
+            {
+                return false;
+            }
+
+            if (node["achieved"].AsBoolean(false) == true)
+            {
+                return true;
+            }
+
+            if (node["value"].AsBoolean(false) == true)
+            {
+                return true;
+            }
+
+            return node["unlock_time"].AsInteger(0) > 0;
         }
 
         private void OnGameListViewRetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
