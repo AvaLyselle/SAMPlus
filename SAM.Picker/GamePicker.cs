@@ -153,6 +153,7 @@ namespace SAM.Picker
             var wantDemos = this._FilterDemosMenuItem.Checked == true;
             var wantMods = this._FilterModsMenuItem.Checked == true;
             var wantJunk = this._FilterJunkMenuItem.Checked == true;
+            var hideCompleted = this._FilterCompletedMenuItem.Checked == true;
 
             this._FilteredGames.Clear();
             foreach (var info in this._Games.Values.OrderBy(gi => gi.Name))
@@ -176,6 +177,11 @@ namespace SAM.Picker
                     continue;
                 }
 
+                if (hideCompleted == true && this.IsGameCompleted(info) == true)
+                {
+                    continue;
+                }
+
                 this._FilteredGames.Add(info);
             }
 
@@ -188,6 +194,172 @@ namespace SAM.Picker
                 this._GameListView.Items[0].Selected = true;
                 this._GameListView.Select();
             }
+        }
+
+        private bool IsGameCompleted(GameInfo info)
+        {
+            if (info.IsCompleted.HasValue == true)
+            {
+                return info.IsCompleted.Value;
+            }
+
+            if (this.TryGetGameCompletion(info.Id, out bool isCompleted) == false)
+            {
+                info.IsCompleted = false;
+                return false;
+            }
+
+            info.IsCompleted = isCompleted;
+            return isCompleted;
+        }
+
+        private bool TryGetGameCompletion(uint appId, out bool isCompleted)
+        {
+            isCompleted = false;
+
+            foreach (var path in this.GetUserStatsPaths(appId))
+            {
+                if (File.Exists(path) == false)
+                {
+                    continue;
+                }
+
+                KeyValue kv;
+                try
+                {
+                    kv = KeyValue.LoadAsBinary(path);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                if (kv == null)
+                {
+                    continue;
+                }
+
+                if (this.TryGetCompletionFromStats(kv, appId, out isCompleted) == true)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private IEnumerable<string> GetUserStatsPaths(uint appId)
+        {
+            string installPath;
+            try
+            {
+                installPath = API.Steam.GetInstallPath();
+            }
+            catch (Exception)
+            {
+                yield break;
+            }
+
+            if (string.IsNullOrEmpty(installPath) == true)
+            {
+                yield break;
+            }
+
+            yield return Path.Combine(installPath, "appcache", "stats", $"UserGameStats_{appId}.bin");
+
+            ulong steamId = this._SteamClient.SteamUser.GetSteamId();
+            if (steamId == 0)
+            {
+                yield break;
+            }
+
+            yield return Path.Combine(
+                installPath,
+                "userdata",
+                steamId.ToString(CultureInfo.InvariantCulture),
+                appId.ToString(CultureInfo.InvariantCulture),
+                "remote",
+                $"UserGameStats_{appId}.bin");
+        }
+
+        private bool TryGetCompletionFromStats(KeyValue kv, uint appId, out bool isCompleted)
+        {
+            isCompleted = false;
+
+            var stats = kv[appId.ToString(CultureInfo.InvariantCulture)]["stats"];
+            if (stats.Valid == false || stats.Children == null)
+            {
+                return false;
+            }
+
+            int total = 0;
+            int achieved = 0;
+
+            foreach (var stat in stats.Children)
+            {
+                if (stat.Valid == false)
+                {
+                    continue;
+                }
+
+                var rawType = stat["type_int"].Valid
+                    ? stat["type_int"].AsInteger(0)
+                    : stat["type"].AsInteger(0);
+                var type = (APITypes.UserStatType)rawType;
+                if (type != APITypes.UserStatType.Achievements &&
+                    type != APITypes.UserStatType.GroupAchievements)
+                {
+                    continue;
+                }
+
+                if (stat.Children == null)
+                {
+                    continue;
+                }
+
+                foreach (var bits in stat.Children.Where(
+                    b => string.Compare(b.Name, "bits", StringComparison.InvariantCultureIgnoreCase) == 0))
+                {
+                    if (bits.Valid == false || bits.Children == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var bit in bits.Children)
+                    {
+                        if (bit.Valid == false)
+                        {
+                            continue;
+                        }
+
+                        total++;
+
+                        bool isAchieved = bit["achieved"].AsBoolean(false);
+                        if (isAchieved == false && bit["value"].AsBoolean(false) == true)
+                        {
+                            isAchieved = true;
+                        }
+
+                        if (isAchieved == false && bit["unlock_time"].AsInteger(0) > 0)
+                        {
+                            isAchieved = true;
+                        }
+
+                        if (isAchieved == true)
+                        {
+                            achieved++;
+                        }
+                    }
+                }
+            }
+
+            if (total == 0)
+            {
+                return false;
+            }
+
+            isCompleted = achieved == total;
+            return true;
         }
 
         private void OnGameListViewRetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)

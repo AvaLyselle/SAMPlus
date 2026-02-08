@@ -106,6 +106,7 @@ namespace SAM.Game
             //this.UserStatsStoredCallback = new API.Callback(1102, new API.Callback.CallbackFunction(this.OnUserStatsStored));
 
             this.RefreshStats();
+            this.UpdateStoreButtonText();
         }
 
         private void AddAchievementIcon(Stats.AchievementInfo info, Image icon)
@@ -394,6 +395,7 @@ namespace SAM.Game
             }
 
             this.UpdateGameStatusLabel();
+            this.UpdateStoreButtonText();
             this.EnableInput();
         }
 
@@ -401,6 +403,7 @@ namespace SAM.Game
         {
             this._AchievementListView.Items.Clear();
             this._StatisticsDataGridView.Rows.Clear();
+            this.UpdateStoreButtonText();
 
             var steamId = this._SteamClient.SteamUser.GetSteamId();
 
@@ -553,7 +556,7 @@ namespace SAM.Game
             this._LastUnlockedAchievementTime = latestUnlockTime;
 
             foreach (var info in filteredAchievements
-                .OrderBy(achievement => achievement.GlobalPercent ?? float.MaxValue)
+                .OrderByDescending(achievement => achievement.GlobalPercent ?? float.MaxValue)
                 .ThenBy(achievement => achievement.Name, StringComparer.CurrentCultureIgnoreCase))
             {
                 this.AddAchievementToIconQueue(info, false);
@@ -749,6 +752,29 @@ namespace SAM.Game
             this._StoreButton.Enabled = true;
         }
 
+        private int GetPendingChangeCount()
+        {
+            int changes = 0;
+
+            foreach (ListViewItem item in this._AchievementListView.Items)
+            {
+                if (item.Tag is Stats.AchievementInfo info && item.Checked != info.IsAchieved)
+                {
+                    changes++;
+                }
+            }
+
+            changes += this._Statistics.Count(stat => stat.IsModified == true);
+
+            return changes;
+        }
+
+        private void UpdateStoreButtonText()
+        {
+            int changes = this.GetPendingChangeCount();
+            this._StoreButton.Text = $"Commit {changes} Changes";
+        }
+
         private void OnTimer(object sender, EventArgs e)
         {
             this._CallbackTimer.Enabled = false;
@@ -767,6 +793,8 @@ namespace SAM.Game
             {
                 item.Checked = false;
             }
+
+            this.UpdateStoreButtonText();
         }
 
         private void OnInvertAll(object sender, EventArgs e)
@@ -775,6 +803,8 @@ namespace SAM.Game
             {
                 item.Checked = !item.Checked;
             }
+
+            this.UpdateStoreButtonText();
         }
 
         private void OnUnlockAll(object sender, EventArgs e)
@@ -783,6 +813,8 @@ namespace SAM.Game
             {
                 item.Checked = true;
             }
+
+            this.UpdateStoreButtonText();
         }
 
         private bool Store()
@@ -863,6 +895,7 @@ namespace SAM.Game
         {
             var view = (DataGridView)sender;
             view.Rows[e.RowIndex].ErrorText = "";
+            this.UpdateStoreButtonText();
         }
 
         private void OnResetAllStats(object sender, EventArgs e)
@@ -927,6 +960,8 @@ namespace SAM.Game
                     MessageBoxIcon.Error);
                 e.NewValue = e.CurrentValue;
             }
+
+            this.BeginInvoke(new Action(this.UpdateStoreButtonText));
         }
 
         private void OnDisplayUncheckedOnly(object sender, EventArgs e)
