@@ -45,6 +45,7 @@
             this._FilterDemosMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this._FilterModsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this._FilterJunkMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this._FilterCompletedMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this._GameListView = new SAM.Picker.MyListView();
             this._PickerStatusStrip = new System.Windows.Forms.StatusStrip();
             this._PickerStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -139,7 +140,8 @@
             this._FilterGamesMenuItem,
             this._FilterDemosMenuItem,
             this._FilterModsMenuItem,
-            this._FilterJunkMenuItem});
+            this._FilterJunkMenuItem,
+            this._FilterCompletedMenuItem});
             this._FilterDropDownButton.Image = global::SAM.Picker.Resources.Filter;
             this._FilterDropDownButton.ImageTransparentColor = System.Drawing.Color.Magenta;
             this._FilterDropDownButton.Name = "_FilterDropDownButton";
@@ -179,6 +181,16 @@
             this._FilterJunkMenuItem.Size = new System.Drawing.Size(180, 22);
             this._FilterJunkMenuItem.Text = "Show &junk";
             this._FilterJunkMenuItem.CheckedChanged += new System.EventHandler(this.OnFilterUpdate);
+            //
+            // _FilterCompletedMenuItem
+            //
+            this._FilterCompletedMenuItem.Checked = true;
+            this._FilterCompletedMenuItem.CheckOnClick = true;
+            this._FilterCompletedMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this._FilterCompletedMenuItem.Name = "_FilterCompletedMenuItem";
+            this._FilterCompletedMenuItem.Size = new System.Drawing.Size(180, 22);
+            this._FilterCompletedMenuItem.Text = "Hide &100% games";
+            this._FilterCompletedMenuItem.CheckedChanged += new System.EventHandler(this.OnFilterUpdate);
             //
             // _GameListView
             //
@@ -272,6 +284,7 @@
         private System.Windows.Forms.ToolStripMenuItem _FilterJunkMenuItem;
         private System.Windows.Forms.ToolStripMenuItem _FilterDemosMenuItem;
         private System.Windows.Forms.ToolStripMenuItem _FilterModsMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem _FilterCompletedMenuItem;
         private System.Windows.Forms.StatusStrip _PickerStatusStrip;
         private System.Windows.Forms.ToolStripStatusLabel _DownloadStatusLabel;
         private System.Windows.Forms.ToolStripStatusLabel _PickerStatusLabel;
